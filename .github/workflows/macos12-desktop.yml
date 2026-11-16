@@ -1,0 +1,137 @@
+name: Build macOS 12 client
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Build this published Nod release, such as nod-v0.8.2, and attach the DMG to it. Leave empty to save the DMG as an artifact only.
+        type: string
+        required: false
+  pull_request:
+    paths:
+      - '.github/workflows/macos12-desktop.yml'
+      - 'desktop/scripts/build-macos12.mjs'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: macos12-desktop-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Intel client for macOS 12
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - name: Check the release tag
+        if: env.RELEASE_TAG != ''
+        run: |
+          if ! printf '%s' "$RELEASE_TAG" | grep -Eq '^nod-v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+            echo "::error::release_tag must look like nod-v0.8.2."
+            exit 1
+          fi
+      - name: Check out the source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.sha }}
+          persist-credentials: false
+      - name: Check that this source can build the client
+        run: |
+          if [ ! -f desktop/scripts/build-macos12.mjs ]; then
+            echo "::error::This source has no macOS 12 client build. Use a release made after the client was added."
+            exit 1
+          fi
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: '24.21.0'
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            desktop/pnpm-lock.yaml
+      - name: Install locked dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --dir desktop install --frozen-lockfile
+      - name: Build the client
+        run: pnpm run desktop:macos12:build
+      - name: Check the disk image
+        run: |
+          image=dist/desktop-macos12/nod-macos12-x64.dmg
+          mount="$RUNNER_TEMP/nod-macos12"
+          mkdir -p "$mount"
+          hdiutil attach -nobrowse -readonly -mountpoint "$mount" "$image"
+          trap 'hdiutil detach "$mount"' EXIT
+          app="$mount/Nod.app"
+          test "$(plutil -extract LSMinimumSystemVersion raw "$app/Contents/Info.plist")" = "12.0"
+          test "$(lipo -archs "$app/Contents/MacOS/nod")" = "x86_64"
+          test ! -e "$app/Contents/Resources/engine/node_modules"
+          test ! -e "$app/Contents/Resources/engine/runtime-release.json"
+          grep -q '"client": true' "$app/Contents/Resources/app/package.json"
+          codesign --verify --deep --strict "$app"
+      - name: Write the checksum
+        working-directory: dist/desktop-macos12
+        run: shasum -a 256 nod-macos12-x64.dmg > nod-macos12-x64.dmg.sha256
+      - name: Save the disk image
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: desktop-macos12-x64
+          path: |
+            dist/desktop-macos12/nod-macos12-x64.dmg
+            dist/desktop-macos12/nod-macos12-x64.dmg.sha256
+          compression-level: 0
+          retention-days: 14
+          if-no-files-found: error
+
+  attach:
+    name: Attach to the release
+    needs: build
+    if: github.ref == 'refs/heads/main' && inputs.release_tag != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: release
+      deployment: false
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download the disk image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: desktop-macos12-x64
+          path: .local/macos12
+      - name: Check the checksum
+        working-directory: .local/macos12
+        run: sha256sum --check nod-macos12-x64.dmg.sha256
+      - name: Sign provenance
+        if: ${{ !github.event.repository.private || vars.NOD_PRIVATE_ATTESTATIONS == 'true' }}
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: .local/macos12/nod-macos12-x64.dmg
+      - name: Attach the files to the published release
+        run: |
+          release="$(gh release view "$RELEASE_TAG" --json isDraft,assets)"
+          if [ "$(jq -r '.isDraft' <<<"$release")" != "false" ]; then
+            echo "::error::$RELEASE_TAG is not a published release."
+            exit 1
+          fi
+          if jq -e '.assets[] | select(.name | startswith("nod-macos12-x64.dmg"))' <<<"$release" >/dev/null; then
+            echo "::error::$RELEASE_TAG already has macOS 12 client files. Delete them first to replace them."
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" .local/macos12/nod-macos12-x64.dmg .local/macos12/nod-macos12-x64.dmg.sha256
+          size="$(stat -c %s .local/macos12/nod-macos12-x64.dmg)"
+          test "$(gh release view "$RELEASE_TAG" --json assets --jq '.assets[] | select(.name == "nod-macos12-x64.dmg") | .size')" = "$size"

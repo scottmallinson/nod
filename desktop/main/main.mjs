@@ -97,10 +97,11 @@ const rendererSecurity = {
   webviewTag: false,
   devTools: !app.isPackaged,
 };
-const testInstall =
-  app.isPackaged &&
-  JSON.parse(await readFile(join(desktopRoot, 'package.json'), 'utf8')).nodBuild?.testProfile ===
-    true;
+const packagedBuild = app.isPackaged
+  ? JSON.parse(await readFile(join(desktopRoot, 'package.json'), 'utf8')).nodBuild
+  : undefined;
+const testInstall = packagedBuild?.testProfile === true;
+const clientBuild = packagedBuild?.client === true;
 const appName = testInstall ? 'nod Setup Test' : 'Nod';
 app.setName(process.platform === 'darwin' && app.isPackaged && !testInstall ? 'nod' : appName);
 const developmentDataRoot =
@@ -815,6 +816,10 @@ function openingBounds(bounds) {
 
 function showSettings(section = 'general', loading = false) {
   if (quitting) return;
+  if (clientBuild && section === 'general' && !status.remote) {
+    connectionSettingsOpen = true;
+    section = 'server';
+  }
   if (!loading && onboardingCompleted && (engine || remoteConnection) && status.phase === 'ready') {
     showEngine();
     const window = engineWindow;
@@ -909,7 +914,9 @@ function showSettings(section = 'general', loading = false) {
       .loadURL(
         `${setupURL}?${new URLSearchParams({
           firstSetup: String(!onboardingCompleted),
-          ...(section === 'server' ? { server: 'true' } : {}),
+          ...(section === 'server'
+            ? { server: 'true', ...(clientBuild ? { client: 'true' } : {}) }
+            : {}),
           ...(section === 'onboarding'
             ? { onboarding: 'true', remote: String(Boolean(remoteConnection || status.remote)) }
             : {}),
@@ -2312,6 +2319,10 @@ async function prepare(options = {}) {
     if (quitting) return status;
     if (status.unlockingKeys) update({ unlockingKeys: false });
     if (connection) return startRemote(connection);
+    if (clientBuild)
+      throw Object.assign(new Error('This version of Nod needs a Nod server to connect to.'), {
+        code: 'NOD_SERVER_TOKEN_UNAVAILABLE',
+      });
     update({
       phase: 'preparing',
       windowError: undefined,
@@ -2440,6 +2451,7 @@ else {
       if (
         app.isPackaged &&
         !testInstall &&
+        !clientBuild &&
         process.platform === 'darwin' &&
         !app.isInApplicationsFolder()
       ) {
@@ -2459,7 +2471,12 @@ else {
           }
         }
       }
-      if (app.isPackaged && !testInstall && ['darwin', 'win32'].includes(process.platform)) {
+      if (
+        app.isPackaged &&
+        !testInstall &&
+        !clientBuild &&
+        ['darwin', 'win32'].includes(process.platform)
+      ) {
         const { nodBuild } = JSON.parse(await readFile(join(desktopRoot, 'package.json'), 'utf8'));
         const windows = process.platform === 'win32';
         if (windows) await rm(windowsUpdates, { recursive: true, force: true }).catch(() => {});
@@ -2876,7 +2893,7 @@ else {
         const saved = await settings.get();
         await resumeState();
         const removeData = Menu.getApplicationMenu?.()?.getMenuItemById('remove-local-data');
-        if (removeData) removeData.enabled = !saved.serverUrl;
+        if (removeData) removeData.enabled = !saved.serverUrl && !clientBuild;
         onboardingCompleted = Boolean(saved.serverUrl) || saved.onboardingCompleted;
         update({ remote: Boolean(saved.serverUrl) });
         applyPreferences(saved);

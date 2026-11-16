@@ -333,6 +333,18 @@ Official Linux builds use the `release` environment on `main`. Like Mac and Wind
 
 The published bundles have no Nod update repository and are not on Flathub. Users install the next bundle to update Nod. `flatpak update` can update the shared desktop runtime, but it does not fetch new Nod bundles.
 
+## Build the macOS 12 client
+
+Macs that stop at macOS 12 can't run the main app. They run a [server-only client](/deploy/desktop-app/#build-the-macos-12-client) instead. **Build macOS 12 client** builds its Intel DMG on a Mac runner. It isn't part of **Build desktop release**, so a release never waits for it and recovery doesn't cover it.
+
+To build it for a published release, start the workflow from **Actions** on `main` and set **release_tag** to the release tag, such as `nod-v0.8.2`. The workflow builds that tag's source, so the client has the release's version. The source must already include the client build. Without **release_tag**, the workflow builds `main` and saves the `desktop-macos12-x64` artifact for 14 days.
+
+With **release_tag**, a second job in the `release` environment attaches `nod-macos12-x64.dmg` and its checksum to that release. It refuses a draft release and a release that already has the files. It signs build provenance for the DMG where the other release files do. The files go to a release that is already published, so running the workflow is your approval to publish them.
+
+Pull requests that change the workflow or `desktop/scripts/build-macos12.mjs` run the build and check the disk image: a 12.0 minimum macOS, an Intel app, no engine and no installed packages, and a valid signature. The runner is a GitHub-hosted Apple silicon Mac on macOS 15. CI doesn't launch the client, because it can't run an Intel Electron app without a display. Check a new client on a real Mac with macOS 12 before you tell anyone to use it.
+
+The client is ad-hoc signed and not notarized. Users approve the first launch by hand, as the [install guide](/get-started/install-desktop/) explains.
+
 ## Signing limits
 
 Mac builds are signed with n8n's Developer ID and notarized by Apple. Windows builds are signed by n8n GmbH with Artifact Signing. SmartScreen can still warn about a new release until Windows trusts its reputation.
