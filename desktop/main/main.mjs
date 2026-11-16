@@ -97,13 +97,11 @@ const rendererSecurity = {
   webviewTag: false,
   devTools: !app.isPackaged,
 };
-const testInstall =
-  app.isPackaged &&
-  JSON.parse(await readFile(join(desktopRoot, 'package.json'), 'utf8')).nodBuild?.testProfile ===
-    true;
-const clientBuild =
-  app.isPackaged &&
-  JSON.parse(await readFile(join(desktopRoot, 'package.json'), 'utf8')).nodBuild?.client === true;
+const packagedBuild = app.isPackaged
+  ? JSON.parse(await readFile(join(desktopRoot, 'package.json'), 'utf8')).nodBuild
+  : undefined;
+const testInstall = packagedBuild?.testProfile === true;
+const clientBuild = packagedBuild?.client === true;
 const appName = testInstall ? 'nod Setup Test' : 'Nod';
 app.setName(process.platform === 'darwin' && app.isPackaged && !testInstall ? 'nod' : appName);
 const developmentDataRoot =
