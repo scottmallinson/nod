@@ -341,7 +341,7 @@ To build it for a published release, start the workflow from **Actions** on `mai
 
 With **release_tag**, a second job in the `release` environment attaches `nod-macos12-x64.dmg` and its checksum to that release. It refuses a draft release and a release that already has the files. It signs build provenance for the DMG where the other release files do. The files go to a release that is already published, so running the workflow is your approval to publish them.
 
-Pull requests that change the workflow or `desktop/scripts/build-macos12.mjs` run the build and check the disk image: a 12.0 minimum macOS, an Intel app, no engine and no installed packages, and a valid signature. The runner is an Apple silicon Mac on macOS 15. CI doesn't launch the client, because it can't run an Intel Electron app without a display. Check a new client on a real Mac with macOS 12 before you tell anyone to use it.
+Pull requests that change the workflow or `desktop/scripts/build-macos12.mjs` run the build and check the disk image: a 12.0 minimum macOS, an Intel app, no engine and no installed packages, and a valid signature. The runner is a GitHub-hosted Apple silicon Mac on macOS 15. CI doesn't launch the client, because it can't run an Intel Electron app without a display. Check a new client on a real Mac with macOS 12 before you tell anyone to use it.
 
 The client is ad-hoc signed and not notarized. Users approve the first launch by hand, as the [install guide](/get-started/install-desktop/) explains.
 
