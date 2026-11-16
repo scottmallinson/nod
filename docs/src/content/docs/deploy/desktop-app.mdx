@@ -292,7 +292,7 @@ pnpm run desktop:macos12:build
 
 The ad-hoc signed `nod-macos12-x64.dmg` lands in `dist/desktop-macos12`. The build stops if Electron's framework needs a newer macOS than 12.0 or the app isn't an Intel build. `pnpm run desktop:macos12:build --stage-only` stops after it stages the app, which you can inspect in `dist/desktop-macos12-staging`.
 
-The client skips Nod's own update check. When you want a newer one, build it again from the release you want.
+The client skips Nod's own update check. When you want a newer one, build it again from the release you want. Maintainers can also [build and attach it to a release](/contribute/desktop-releases/#build-the-macos-12-client) with a workflow.
 
 </details>
 

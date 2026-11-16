@@ -52,7 +52,7 @@ You need macOS 14 or later, on Apple silicon or Intel. For a local assistant, th
 
 The released app needs macOS 14. Electron 44 needs macOS 13, and the local assistant's private computer needs macOS 13 or later too. Macs that stop at macOS 12 Monterey, such as the 2014 Mac mini, can run a **server client** instead. It is the desktop app with **Connect to a server** only: no local assistant, no private computer download and no automatic updates. Your chats, files and model connections stay on the server.
 
-You build the client yourself, on any Mac with macOS 14 or later, and copy the DMG to the older Mac. See [Build the macOS 12 client](/deploy/desktop-app/#build-the-macos-12-client). Then:
+If a [release](https://github.com/n8n-io/nod/releases) lists `nod-macos12-x64.dmg`, download it. Otherwise, build the client yourself on any Mac with macOS 14 or later and copy the DMG to the older Mac. See [Build the macOS 12 client](/deploy/desktop-app/#build-the-macos-12-client). Then:
 
 1. Open the DMG and drag **Nod** to **Applications**.
 2. macOS blocks the first launch because the build isn't notarized. Control-click **Nod**, choose **Open**, then **Open** again.
