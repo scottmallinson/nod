@@ -5333,3 +5333,31 @@ test('local test installs refuse normal apps and cannot reuse or follow foreign 
   assert.equal(await readFile(saved, 'utf8'), 'synthetic preserved account data');
   assert.deepEqual(await readdir(foreign), ['test-profile.json']);
 });
+
+test('the main process starts without the engine or any installed package, so the macOS 12 client can run from desktop/main alone', async () => {
+  const main = resolve(import.meta.dirname, '../main');
+  const pending = [join(main, 'main.mjs')];
+  const seen = new Set();
+  while (pending.length) {
+    const file = pending.pop();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    const source = await readFile(file, 'utf8');
+    for (const match of source.matchAll(
+      /^\s*(?:import|export)\s[^;]*?\sfrom\s+['"]([^'"]+)['"]|^\s*import\s+['"]([^'"]+)['"]/gm,
+    )) {
+      const specifier = match[1] ?? match[2];
+      if (!specifier.startsWith('.')) {
+        assert(
+          specifier === 'electron' || specifier.startsWith('node:'),
+          `${relative(main, file)} imports ${specifier}`,
+        );
+        continue;
+      }
+      const target = resolve(dirname(file), specifier);
+      assert.equal(dirname(target), main, `${relative(main, file)} imports ${specifier}`);
+      pending.push(target);
+    }
+  }
+  assert(seen.size > 1);
+});

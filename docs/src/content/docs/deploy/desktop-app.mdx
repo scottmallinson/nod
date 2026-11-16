@@ -223,7 +223,7 @@ Inside Nod's distribution, drive mounts and Windows process access are turned of
 
 ## Current limits
 
-- Release builds cover Mac with Apple silicon or Intel, Windows 11 x64, and Linux x64 as a [Flatpak preview](/get-started/install-desktop/#linux). Linux ARM and Windows ARM builds are not published.
+- Release builds cover Mac with Apple silicon or Intel, Windows 11 x64, and Linux x64 as a [Flatpak preview](/get-started/install-desktop/#linux). Linux ARM and Windows ARM builds are not published. Macs on macOS 12 can run a [server-only client](/get-started/install-desktop/) that you build yourself.
 - Local tasks run only while Nod is open and the computer is awake. While a chat reply, task, scheduled run or background check is in progress, Nod stops the computer from going to sleep when it's left idle; closing a laptop's lid or choosing Sleep still puts it to sleep. Server tasks run while the server runs.
 - Meta's WhatsApp Cloud API needs a public HTTPS callback. The QR connection works without one. The app doesn't relay webhooks to your computer.
 - Separate local installations start with their own profiles and do not sync or migrate data from a source install. To use the same assistant from several devices, connect them to one server.
@@ -276,6 +276,25 @@ pnpm run desktop:dev
 ```
 
 For OAuth callbacks, use your development service's public HTTPS origin instead. The address must have no path, query, fragment or user credentials; HTTP is allowed only for loopback. Packaged desktop apps and desktop launches without an explicit development profile ignore this override. Never use your normal Nod profile for this test.
+
+<details id="build-the-macos-12-client">
+<summary>Build the macOS 12 client</summary>
+
+The macOS 12 client is a separate, server-only build for Intel Macs that can't run macOS 14, such as a 2014 Mac mini. It packages Electron 43 with the desktop shell and the connection page. It leaves out the engine, the private computer and automatic updates. A Mac with macOS 14 or later builds it, with Apple silicon or Intel. The build targets Intel, so you don't need the older Mac to build.
+
+Install the root and desktop dependencies, then run:
+
+```sh title="Terminal"
+pnpm install --frozen-lockfile
+pnpm --dir desktop install --frozen-lockfile
+pnpm run desktop:macos12:build
+```
+
+The ad-hoc signed `nod-macos12-x64.dmg` lands in `dist/desktop-macos12`. The build stops if Electron's framework needs a newer macOS than 12.0 or the app isn't an Intel build. `pnpm run desktop:macos12:build --stage-only` stops after it stages the app, which you can inspect in `dist/desktop-macos12-staging`.
+
+The client skips Nod's own update check. When you want a newer one, build it again from the release you want.
+
+</details>
 
 <details>
 <summary>Build for Windows</summary>

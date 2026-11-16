@@ -67,6 +67,7 @@ type Desktop = {
 const desktop = (window as Window & { nodDesktop?: Desktop }).nodDesktop;
 const parameters = new URLSearchParams(location.search);
 const firstSetup = parameters.get('firstSetup') === 'true';
+const clientOnly = parameters.get('client') === 'true';
 document.documentElement.dataset.theme = window.matchMedia?.('(prefers-color-scheme: dark)').matches
   ? 'dark'
   : 'light';
@@ -252,23 +253,31 @@ function ConnectionSetup() {
           <button className="server-connect" type="submit" disabled={busy || loading}>
             {busy ? 'Connecting…' : 'Connect and restart app'}
           </button>
-          <p className="server-help">
-            Your local chats and files are kept. You can switch back anytime.
-          </p>
-          <div className="server-actions">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void desktop?.closeConnectionSettings()}
-            >
-              Back
-            </button>
-            {connected && (
-              <button type="button" disabled={busy || loading} onClick={() => void connect(true)}>
-                Use this computer
-              </button>
-            )}
-          </div>
+          {!clientOnly && (
+            <>
+              <p className="server-help">
+                Your local chats and files are kept. You can switch back anytime.
+              </p>
+              <div className="server-actions">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void desktop?.closeConnectionSettings()}
+                >
+                  Back
+                </button>
+                {connected && (
+                  <button
+                    type="button"
+                    disabled={busy || loading}
+                    onClick={() => void connect(true)}
+                  >
+                    Use this computer
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </form>
       </main>
     </>

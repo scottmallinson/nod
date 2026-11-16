@@ -48,6 +48,25 @@ You need macOS 14 or later, on Apple silicon or Intel. For a local assistant, th
 </Steps>
 
 <details>
+<summary>Older Intel Mac on macOS 12 or 13 (for example, a 2014 Mac mini)</summary>
+
+The released app needs macOS 14. Electron 44 needs macOS 13, and the local assistant's private computer needs macOS 13 or later too. Macs that stop at macOS 12 Monterey, such as the 2014 Mac mini, can run a **server client** instead. It is the desktop app with **Connect to a server** only: no local assistant, no private computer download and no automatic updates. Your chats, files and model connections stay on the server.
+
+You build the client yourself, on any Mac with macOS 14 or later, and copy the DMG to the older Mac. See [Build the macOS 12 client](/deploy/desktop-app/#build-the-macos-12-client). Then:
+
+1. Open the DMG and drag **Nod** to **Applications**.
+2. macOS blocks the first launch because the build isn't notarized. Control-click **Nod**, choose **Open**, then **Open** again.
+3. Enter your server's HTTPS address and authentication token. The [server guide](/deploy/self-host/) explains both.
+
+Nod shows the connection page every time it opens without a saved server. To update, build and install a newer client by hand.
+
+:::caution[This build runs on an older Electron]
+The macOS 12 client uses Electron 43, the last version that runs on macOS 12. It doesn't get Electron's newer Chromium security fixes. Connect it only to your own server, and keep that Mac's browsing and other apps up to date.
+:::
+
+</details>
+
+<details>
 <summary>Install from Terminal instead</summary>
 
 You can install the latest release on Apple silicon or Intel with one command. Quit Nod first, then paste this into Terminal:
